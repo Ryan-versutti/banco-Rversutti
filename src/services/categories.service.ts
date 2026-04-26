@@ -12,10 +12,12 @@ import {
   serverTimestamp,
   Timestamp,
   updateDoc,
+  where,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { Category, CategoryInput } from "@/types/category";
 import { slugify } from "@/utils/format";
+import { requireUserId } from "./session";
 
 const COLLECTION = "categories";
 
@@ -30,8 +32,18 @@ function fromDoc(snap: QueryDocumentSnapshot<DocumentData>): Category {
   };
 }
 
+async function ensureOwned(id: string): Promise<void> {
+  const uid = requireUserId();
+  const snap = await getDoc(doc(db, COLLECTION, id));
+  if (!snap.exists() || snap.data().userId !== uid) {
+    throw new Error("Categoria não encontrada");
+  }
+}
+
 export async function createCategory(input: Pick<CategoryInput, "name">): Promise<string> {
+  const uid = requireUserId();
   const ref = await addDoc(collection(db, COLLECTION), {
+    userId: uid,
     name: input.name,
     slug: slugify(input.name),
     createdAt: serverTimestamp(),
@@ -44,6 +56,7 @@ export async function updateCategory(
   id: string,
   input: Partial<Pick<CategoryInput, "name">>,
 ): Promise<void> {
+  await ensureOwned(id);
   const payload: Record<string, unknown> = { updatedAt: serverTimestamp() };
   if (input.name !== undefined) {
     payload.name = input.name;
@@ -53,17 +66,24 @@ export async function updateCategory(
 }
 
 export async function deleteCategory(id: string): Promise<void> {
+  await ensureOwned(id);
   await deleteDoc(doc(db, COLLECTION, id));
 }
 
 export async function getCategory(id: string): Promise<Category | null> {
+  const uid = requireUserId();
   const snap = await getDoc(doc(db, COLLECTION, id));
-  if (!snap.exists()) return null;
+  if (!snap.exists() || snap.data().userId !== uid) return null;
   return fromDoc(snap as QueryDocumentSnapshot<DocumentData>);
 }
 
 export async function listCategories(): Promise<Category[]> {
-  const q = query(collection(db, COLLECTION), orderBy("name", "asc"));
+  const uid = requireUserId();
+  const q = query(
+    collection(db, COLLECTION),
+    where("userId", "==", uid),
+    orderBy("name", "asc"),
+  );
   const snap = await getDocs(q);
   return snap.docs.map(fromDoc);
 }

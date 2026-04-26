@@ -17,6 +17,7 @@ import {
 import { db } from "@/lib/firebase";
 import { Expense, ExpenseInput } from "@/types/expense";
 import { getMonthRange } from "@/utils/date";
+import { requireUserId } from "./session";
 
 const COLLECTION = "expenses";
 
@@ -37,8 +38,18 @@ function fromDoc(snap: QueryDocumentSnapshot<DocumentData>): Expense {
   };
 }
 
+async function ensureOwned(id: string): Promise<void> {
+  const uid = requireUserId();
+  const snap = await getDoc(doc(db, COLLECTION, id));
+  if (!snap.exists() || snap.data().userId !== uid) {
+    throw new Error("Despesa não encontrada");
+  }
+}
+
 export async function createExpense(input: ExpenseInput): Promise<string> {
+  const uid = requireUserId();
   const ref = await addDoc(collection(db, COLLECTION), {
+    userId: uid,
     name: input.name,
     amount: input.amount,
     categoryId: input.categoryId,
@@ -54,6 +65,7 @@ export async function createExpense(input: ExpenseInput): Promise<string> {
 }
 
 export async function updateExpense(id: string, input: Partial<ExpenseInput>): Promise<void> {
+  await ensureOwned(id);
   const payload: Record<string, unknown> = { updatedAt: serverTimestamp() };
   if (input.name !== undefined) payload.name = input.name;
   if (input.amount !== undefined) payload.amount = input.amount;
@@ -67,19 +79,23 @@ export async function updateExpense(id: string, input: Partial<ExpenseInput>): P
 }
 
 export async function deleteExpense(id: string): Promise<void> {
+  await ensureOwned(id);
   await deleteDoc(doc(db, COLLECTION, id));
 }
 
 export async function getExpense(id: string): Promise<Expense | null> {
+  const uid = requireUserId();
   const snap = await getDoc(doc(db, COLLECTION, id));
-  if (!snap.exists()) return null;
+  if (!snap.exists() || snap.data().userId !== uid) return null;
   return fromDoc(snap as QueryDocumentSnapshot<DocumentData>);
 }
 
 export async function listExpensesByMonth(year: number, month: number): Promise<Expense[]> {
+  const uid = requireUserId();
   const { start, end } = getMonthRange(year, month);
   const q = query(
     collection(db, COLLECTION),
+    where("userId", "==", uid),
     where("spentAt", ">=", Timestamp.fromDate(start)),
     where("spentAt", "<", Timestamp.fromDate(end)),
     orderBy("spentAt", "desc"),
@@ -93,7 +109,11 @@ export async function listExpensesByCategory(
   year?: number,
   month?: number,
 ): Promise<Expense[]> {
-  const constraints = [where("categoryId", "==", categoryId)];
+  const uid = requireUserId();
+  const constraints = [
+    where("userId", "==", uid),
+    where("categoryId", "==", categoryId),
+  ];
   if (year !== undefined && month !== undefined) {
     const { start, end } = getMonthRange(year, month);
     constraints.push(where("spentAt", ">=", Timestamp.fromDate(start)));
@@ -105,7 +125,12 @@ export async function listExpensesByCategory(
 }
 
 export async function listAllExpenses(): Promise<Expense[]> {
-  const q = query(collection(db, COLLECTION), orderBy("spentAt", "desc"));
+  const uid = requireUserId();
+  const q = query(
+    collection(db, COLLECTION),
+    where("userId", "==", uid),
+    orderBy("spentAt", "desc"),
+  );
   const snap = await getDocs(q);
   return snap.docs.map(fromDoc);
 }
