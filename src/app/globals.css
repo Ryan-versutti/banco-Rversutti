@@ -1,0 +1,77 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html,
+body {
+  @apply min-h-full;
+}
+
+body {
+  @apply bg-neutral-50 text-neutral-900 antialiased transition-colors;
+}
+
+html.dark body {
+  @apply bg-neutral-950 text-neutral-100;
+}
+
+@layer components {
+  .card {
+    @apply rounded-xl border border-neutral-200 bg-white shadow-sm transition-colors;
+  }
+  .dark .card {
+    @apply border-neutral-800 bg-neutral-900;
+  }
+
+  .input {
+    @apply rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-900 outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-500/30;
+  }
+  .dark .input {
+    @apply border-neutral-700 bg-neutral-800 text-neutral-100 focus:border-brand-400 focus:ring-brand-400/30;
+  }
+
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50;
+  }
+  .btn-primary {
+    @apply btn bg-brand-600 text-white shadow-sm hover:bg-brand-700;
+  }
+  .dark .btn-primary {
+    @apply bg-brand-500 hover:bg-brand-400;
+  }
+
+  .btn-secondary {
+    @apply btn border border-neutral-300 bg-white text-neutral-800 hover:bg-neutral-100;
+  }
+  .dark .btn-secondary {
+    @apply border-neutral-700 bg-neutral-800 text-neutral-100 hover:bg-neutral-700;
+  }
+
+  .btn-danger {
+    @apply btn border border-red-300 bg-white text-red-700 hover:bg-red-50;
+  }
+  .dark .btn-danger {
+    @apply border-red-900 bg-neutral-900 text-red-300 hover:bg-red-950/40;
+  }
+
+  .btn-ghost {
+    @apply btn text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900;
+  }
+  .dark .btn-ghost {
+    @apply text-neutral-300 hover:bg-neutral-800 hover:text-white;
+  }
+
+  .icon-btn {
+    @apply inline-flex h-9 w-9 items-center justify-center rounded-lg border border-neutral-300 bg-white text-neutral-700 transition hover:bg-neutral-100;
+  }
+  .dark .icon-btn {
+    @apply border-neutral-700 bg-neutral-800 text-neutral-200 hover:bg-neutral-700;
+  }
+
+  .muted {
+    @apply text-neutral-500;
+  }
+  .dark .muted {
+    @apply text-neutral-400;
+  }
+}
